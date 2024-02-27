@@ -1,0 +1,381 @@
+{
+	"grades": [
+		{
+			"name": "SAÉ - Cuisine",
+			"teacher": "Laurent L'Ardoise",
+			"average": "20 (calculée)",
+			"grades": [
+				[
+					"Séance N°1 - Devoir Surveillé",
+					[
+                        "20",
+						"1.5"
+					]
+				],
+				[
+					"Séance N°2 - Note d'équipe",
+					[
+						"(coeff 2.0000)"
+					]
+				],
+				[
+					"Séance N°3 - Note individuelle",
+					[
+						"(coeff 3.5000)"
+					]
+				]
+			],
+			"empty": ""
+		},
+		{
+			"name": "SAÉ - Piscine",
+			"teacher": "Jacky Michelle",
+			"average": "Pas de moyenne disponible",
+			"grades": [
+				[
+					"Séance N°1 - Devoir surveillé",
+					[
+						"(coeff 1.5000)"
+					]
+				],
+				[
+					"Séance N°2 - TP",
+					[
+						"(coeff 2.0000)"
+					]
+				],
+				[
+					"Séance N°3 - Mesureur",
+					[
+						"(coeff 1.5000)"
+					]
+				]
+			],
+			"empty": ""
+		},
+		{
+			"name": "RES - Énergie",
+			"teacher": "Alouis Dy-Hallo",
+			"average": "16.808 (calculée)",
+			"grades": [
+				[
+					"Séance N°1 - TP",
+					[
+						"13",
+						"0.1"
+					]
+				],
+				[
+					"Séance N°2 - DS n°1",
+					[
+						"17.5",
+						"0.8"
+					]
+				],
+				[
+					"Séance N°3 - DS n°2",
+					[
+						"13.5",
+						"0.8"
+					]
+				],
+				[
+					"Séance N°4 - DM",
+					[
+						"20",
+						"0.4"
+					]
+				],
+				[
+					"Séance N°5 - Quiz",
+					[
+						"19.8",
+						"0.4"
+					]
+				]
+			],
+			"empty": ""
+		},
+		{
+			"name": "RES - Automatisme",
+			"teacher": "Christopher Vert",
+			"average": "16.903 (calculée)",
+			"grades": [
+				[
+					"Séance N°1 - DS1",
+					[
+						"17",
+						"0.55"
+					]
+				],
+				[
+					"Séance N°2 - DS2",
+					[
+						"17.5",
+						"0.55"
+					]
+				],
+				[
+					"Séance N°3 - Séances TP",
+					[
+						"(coeff 0.3500)"
+					]
+				],
+				[
+					"Séance N°4 - TP",
+					[
+						"18.7",
+						"0.9"
+					]
+				]
+			],
+			"empty": ""
+		},
+		{
+			"name": "RES - Informatique",
+			"teacher": "Jean-Louis Eiffel",
+			"average": "18.81 (calculée)",
+			"grades": [
+				[
+					"Séance N°1 - DS1",
+					[
+						"18.5",
+						"0.85"
+					]
+				],
+				[
+					"Séance N°2 - DS2",
+					[
+						"18",
+						"0.85"
+					]
+				],
+				[
+					"Séance N°3 - TP",
+					[
+						"20",
+						"0.8"
+					]
+				]
+			],
+			"empty": ""
+		},
+		{
+			"name": "RES - Électronique",
+			"teacher": "Filippe Le Turc",
+			"average": "15.48 (calculée)",
+			"grades": [
+				[
+					"Séance N°1 - DS1",
+					[
+						"10",
+						"0.9"
+					]
+				],
+				[
+					"Séance N°2 - DS2",
+					[
+						"14",
+                        "0.9"
+					]
+				],
+				[
+					"Séance N°3 - TP",
+					[
+						"13.3",
+						"0.7"
+					]
+				]
+			],
+			"empty": ""
+		},
+		{
+			"name": "RES - Projet professionnel",
+			"teacher": "Ben Dover",
+			"average": "Pas de moyenne disponible",
+			"grades": [
+				[
+					"Séance N°1 - Séance",
+					[
+						"(coeff 0.5000)"
+					]
+				]
+			],
+			"empty": ""
+		},
+		{
+			"name": "RES - IUT",
+			"teacher": "Jeremie Bruh",
+			"average": "20 (calculée)",
+			"grades": [
+				[
+					"Séance N°1 - Moodle",
+					[
+						"(coeff 0.2500)"
+					]
+				],
+				[
+					"Séance N°2 - Bureautique",
+					[
+						"20",
+						"0.25"
+					]
+				]
+			],
+			"empty": ""
+		},
+		{
+			"name": "RES - Entrepreunariat",
+			"teacher": "Alain Cabanon",
+			"average": "Pas de moyenne disponible",
+			"grades": [
+				[
+					"Séance N°1 - Rapport",
+					[
+						"(coeff 0.4000)"
+					]
+				]
+			],
+			"empty": ""
+		},
+		{
+			"name": "RES - Anglais",
+			"teacher": "Hugh Janus",
+			"average": "15.4 (calculée)",
+			"grades": [
+				[
+					"Séance N°1 - DS",
+					[
+						"15.5",
+						"0.5"
+					]
+				],
+				[
+					"Séance N°2 - Exposé",
+					[
+						"20",
+						"0.3"
+					]
+				],
+				[
+					"Séance N°3 - Vocabulaire / compréhension",
+					[
+						"16.5",
+						"0.2"
+					]
+				],
+				[
+					"Séance N°4 - Implication- quiz",
+					[
+						"20",
+						"0.3"
+					]
+				]
+			],
+			"empty": ""
+		},
+		{
+			"name": "RES - Mathématiques",
+			"teacher": "Françoise Coude",
+			"average": "15.48 (calculée)",
+			"grades": [
+				[
+					"Séance N°1 - OML1 Séances TD",
+					[
+						"18",
+						"0.7"
+					]
+				],
+				[
+					"Séance N°2 - OML1 DS1",
+					[
+						"15",
+						"0.6"
+					]
+				],
+				[
+					"Séance N°3 - OML1 DS2",
+					[
+						"14.5",
+						"0.6"
+					]
+				],
+				[
+					"Séance N°4 - OML1 DS3",
+					[
+						"14",
+						"0.6"
+					]
+				]
+			],
+			"empty": ""
+		},
+		{
+			"name": "RES - Culture et communication",
+			"teacher": "Mike Oxlong",
+			"average": "15.5 (calculée)",
+			"grades": [
+				[
+					"Séance N°1 - Séance (oral)",
+					[
+						"17.5",
+						"0.4"
+					]
+				],
+				[
+					"Séance N°2 - Séance (écrit)",
+					[
+						"13.5",
+						"0.4"
+					]
+				],
+				[
+					"Séance N°3 - CC1 DS (argumentation)",
+					[
+						"(coeff 0.5000)"
+					]
+				]
+			],
+			"empty": ""
+		},
+		{
+			"name": "RES - Physique Chimie",
+			"teacher": "Carola Italiana",
+			"average": "8.75 (calculée)",
+			"grades": [
+				[
+					"Séance N°1 - DS1",
+					[
+						"11",
+						"0.75"
+					]
+				],
+				[
+					"Séance N°2 - DS2",
+					[
+						"6.5",
+						"0.75"
+					]
+				]
+			],
+			"empty": ""
+		},
+		{
+			"name": "Pénalité pour absences S4",
+			"teacher": "Coua Koubeh",
+			"average": "Pas de moyenne disponible",
+			"grades": [
+				[
+					"Séance N°1 - Séance N°1",
+					[
+						"Résultats non publiés"
+					]
+				]
+			],
+			"empty": "empty"
+		}
+	],
+	"admission": "",
+	"average": "",
+	"position": ""
+}

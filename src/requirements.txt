@@ -1,0 +1,15 @@
+Flask ~= 3.0.2
+Flask-Assets ~= 2.1
+flask-talisman ~= 1.1
+Flask-Limiter ~= 3.5
+cssmin ~= 0.2
+requests ~= 2.31
+PyPDF4 ~= 1.27
+waitress ~= 3.0
+beautifulsoup4 ~= 4.12
+icalendar ~= 5.0.11
+pytz ~= 2024.1
+werkzeug ~= 3.0.1
+bugsnag[flask] ~= 4.6.1
+flask_monitoringdashboard >= 3.2.2
+sentry-sdk[flask]

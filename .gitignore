@@ -1,0 +1,6 @@
+*.log
+*.pyc
+secret.json
+status.json
+src/flask_monitoringdashboard.db
+src/config.cfg
