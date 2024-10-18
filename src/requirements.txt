@@ -10,6 +10,6 @@ beautifulsoup4 ~= 4.12
 icalendar ~= 5.0.11
 pytz ~= 2024.1
 werkzeug ~= 3.0.1
-bugsnag[flask] ~= 4.6.1
+bugsnag[flask] ~= 4.7.1
 flask_monitoringdashboard >= 3.2.2
 sentry-sdk[flask]
