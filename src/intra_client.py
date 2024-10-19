@@ -3,7 +3,7 @@
 # Votre ENT. Dans votre poche.                         #
 # Développé par Hugo Meleiro (@hugofnm) / MetrixMedia  #
 # Basé sur les travaux de : @itskatt/extracursus       #
-# 2022 - 2024                                          #
+# 2022 - 2025                                          #
 ########################################################
 
 from requests import Session
@@ -20,6 +20,9 @@ class IntraClient:
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
                           "(KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36"
         })
+        # self.sess.headers.update({
+        #     "User-Agent": "Mozilla/5.0 (compatible; UniceAPI/1.0; +https://notes.metrixmedia.fr)"
+        # })
         self.semesters = []
         self.current_semester = None
 
@@ -35,13 +38,13 @@ class IntraClient:
         if(username == "demo" and password == "demo"):
             return True
 
-        resp = self.sess.get("https://intracursus.unice.fr/ic/dlogin/cas.php", timeout = 20)
+        login_url = "https://login.univ-cotedazur.fr/login?service=https%3A%2F%2Flogin.univ-cotedazur.fr"
+
+        resp = self.sess.get(login_url, timeout = 5)
         html_page = resp.text
 
-        # trois valeurs importantes
-        route_login = "/login?service=https%3A%2F%2Fintracursus.unice.fr%2Fic%2Fdlogin%2Fcas.php"
+        # deux valeurs importantes
         execution = html_page.split('type="hidden" name="execution" value="')[1].split('"')[0]
-
         payload = {
             "username": username,
             "password": password,
@@ -51,15 +54,14 @@ class IntraClient:
             "submit": "SE CONNECTER"
         }
 
-        resp = self.sess.post(
-            f"https://login.univ-cotedazur.fr{route_login}", data=payload, allow_redirects=False, timeout = 20)
+        resp = self.sess.post(login_url, data=payload, allow_redirects=False, timeout = 5)
 
         # si on a donné des mauvais identifiants
         if "Location" not in resp.headers:
             return False
 
         url_location = resp.headers["Location"]
-        resp = self.sess.get(url_location, timeout = 20)
+        resp = self.sess.get(url_location, timeout = 5)
 
         ticket = url_location.split('ticket=')[1]
         self.sess.cookies.set("SESSID", ticket, domain="planier.univ-cotedazur.fr")
@@ -69,15 +71,18 @@ class IntraClient:
         """
         Déconnexion de l'intranet
         """
-        self.sess.get("https://login.univ-cotedazur.fr/logout", timeout = 20)
+        self.sess.get("https://login.univ-cotedazur.fr/logout", timeout = 10)
 
     def get_semesters(self):
         """
         Se connecte a intracursus et renvoie la liste des des semestres disponible
         """
-        # connection a intracursus
-        resp = self.sess.get("https://intracursus.unice.fr/ic/dlogin/cas.php")
-        html_page = resp.text
+        # connexion a intracursus
+        try:
+            resp = self.sess.get("https://intracursus.unice.fr/ic/dlogin/cas.php", timeout = 15)
+            html_page = resp.text
+        except Exception:
+            return None
 
         semesters = {}
         # recuperation du semestre actuel
@@ -103,28 +108,28 @@ class IntraClient:
         self.semesters = semesters
         return list(semesters.keys())
 
-    def get_name(self):
+    def get_info(self):
         """
-        Renvoie le nom de l'utilisateur
+        Renvoie les infos de l'utilisateur
         """
-        resp = self.sess.get("https://intracursus.unice.fr/ic/dlogin/cas.php")
-        string = resp.text
+        informations = {}
+        try:
+            resp = self.sess.get("https://login.univ-cotedazur.fr/login", timeout = 5)
+            string = resp.text
+        except Exception:
+            return None
 
         soup = BeautifulSoup(string, 'html.parser')
 
-        pattern = "Notes et absences de [A-Z]* [A-Z]*"
-        name = soup.find(string=re.compile(pattern))
-        name = str(name)
+        infos = soup.find_all('table')[0]
 
-        # remove the unwanted part
-        name = name.strip("Notes et absences de ")
+        for row in infos.tbody.find_all('tr'):    
+            # Find all data for each column
+            columns = row.find_all('td')
+            informations[columns[0].text] = columns[1].text.strip('\n[]')
 
-        # split the name by "("
-        substrings = name.split("(")
-
-        # remove the last part
-        name = substrings[0]
-        name = name.rstrip()
+        # Traitement du nom
+        name = informations["displayName"]
 
         if name == "":
             name = "Étudiant"
@@ -136,7 +141,9 @@ class IntraClient:
         # on met la premiere lettre de chaque nom en majuscule
         name = name.title()
 
-        return name
+        informations["displayName"] = name
+
+        return informations
 
     def get_avatar(self):
         """
@@ -158,7 +165,10 @@ class IntraClient:
         if not img_url:
             return None
 
-        avatar = self.sess.get("https://login.univ-cotedazur.fr/login?service=https%3A%2F%2Fintracursus.unice.fr%2Fic%2Fetudiant/" + img_url)
+        try:
+            avatar = self.sess.get("https://login.univ-cotedazur.fr/login?service=https%3A%2F%2Fintracursus.unice.fr%2Fic%2Fetudiant/" + img_url)
+        except Exception:
+            return None
 
         if avatar.status_code != 200:
             return None
@@ -186,117 +196,10 @@ class IntraClient:
         return resp.content
     
     def get_latest_semester_pdf(self):
-        # semestre actuel
-        semester = self.current_semester
-        if self.current_semester and any(v == semester for v in self.semesters.values()):
-            payload = {
-            "telrelevepresences": f"Télécharger le relevé des notes et absences de {semester}"
-        }
-        # autre semestre
-        else:
-            payload = {
-                "idautreinscription": self.semesters[semester],
-                "telreleveanterieur": "Télécharger le relevé du parcours sélectionné"
-            }
-
-        # téléchargement...
         resp = self.sess.post(
-            "https://intracursus.unice.fr/ic/etudiant/ic-notes-presences.php",
-            data=payload
+            "https://intracursus.unice.fr/ic/etudiant/ic-notes-presences.php"
         )
+        if resp.status_code != 200:
+            return None
+
         return resp.content
-
-    def get_absences(self): # ce code est plus bancal que le batiment de l'iut
-        self.sess.get("https://iut-gpu-personnels.unice.fr/sat/index.php", verify=False, timeout = 20)
-        resp = self.sess.get("https://login.univ-cotedazur.fr/login?service=https%3A%2F%2Fiut-gpu-personnels.unice.fr%2Fmobile%2Findex.php%3Faim%3Dconsultabs", verify=False, timeout = 20)
-
-        soup = BeautifulSoup(resp.text, 'html.parser')
-
-        whichone = 1
-        absences_data = []
-        retards_data = []
-        exclusions_data = []
-        
-        # Find the tables by tag or other attributes
-        text_element = soup.find(lambda tag: tag.name == 'p' and "par les absences" in tag.text)
-        if not "Aucun enseignement" in str(text_element.find_next().find_next()) :
-            absences_table = soup.find_all('table')[whichone]  # Find the first table
-            # Extract absences data
-            whichone += 2
-            rows = absences_table.find_all('tr')
-            for row in rows[1:]:  # Skip the header row
-                cells = row.find_all('td')
-                absence_date = cells[0].text.strip()
-                absence_hour = cells[1].text.strip()
-                absence_type = cells[2].text.strip()
-                absence_class = ' '.join((cells[3].text.strip()).split())
-                absence_prof = cells[4].text.strip()
-                absence_justified = cells[5].text.strip() == 'Oui'
-                absence_reason = cells[6].text.strip()
-                absences_data.append({
-                    'date': absence_date,
-                    'hour': absence_hour,
-                    'type': absence_type,
-                    'class': absence_class,
-                    'prof' : absence_prof,
-                    'justified': absence_justified,
-                    'reason': absence_reason
-                })            
-        
-        text_element = soup.find(lambda tag: tag.name == 'p' and "par les retards" in tag.text)
-        if not "Aucun enseignement" in str(text_element.find_next().find_next()) :
-            retards_table = soup.find_all('table')[whichone]  # Find the second table
-            # Extract retards data
-            whichone += 2
-            rows = retards_table.find_all('tr')
-            for row in rows[1:]:
-                cells = row.find_all('td')
-                retard_date = cells[0].text.strip()
-                retard_hour = cells[1].text.strip()
-                retard_type = cells[2].text.strip()
-                retard_class = ' '.join((cells[3].text.strip()).split())
-                retard_prof = cells[4].text.strip()
-                retard_justified = cells[5].text.strip() == 'Oui'
-                retard_reason = cells[6].text.strip()
-                retards_data.append({
-                    'date': retard_date,
-                    'hour': retard_hour,
-                    'type': retard_type,
-                    'class': retard_class,
-                    'prof' : retard_prof,
-                    'justified': retard_justified,
-                    'reason': retard_reason
-                })
-        
-        text_element = soup.find(lambda tag: tag.name == 'p' and "par les exclusions" in tag.text)
-        if not "Aucun enseignement" in str(text_element.find_next().find_next()) :
-            exclusions_table = soup.find_all('table')[whichone]  # Find the third table
-            # Extract exclusions data
-            rows = exclusions_table.find_all('tr')
-            for row in rows[1:]:
-                cells = row.find_all('td')
-                exclusion_date = cells[0].text.strip()
-                exclusion_hour = cells[1].text.strip()
-                exclusion_type = cells[2].text.strip()
-                exclusion_class = ' '.join((cells[3].text.strip()).split())
-                exclusion_prof = cells[4].text.strip()
-                exclusion_justified = cells[5].text.strip() == 'Oui'
-                exclusion_reason = cells[6].text.strip()
-                exclusions_data.append({
-                    'date': exclusion_date,
-                    'hour': exclusion_hour,
-                    'type': exclusion_type,
-                    'class': exclusion_class,
-                    'prof' : exclusion_prof,
-                    'justified': exclusion_justified,
-                    'reason': exclusion_reason
-                })            
-                
-        # Create a JSON object containing all the data
-        result = {
-            'absences': absences_data,
-            'retards': retards_data,
-            'exclusions': exclusions_data
-        }
-
-        return result

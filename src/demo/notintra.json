@@ -1,0 +1,51 @@
+{
+	"grades": [
+		{
+			"name": "SI VOUS ETES LICENCE/MASTER",
+			"teacher": "VEUILLEZ NE PAS",
+			"average": "UTILISER CE MODULE !!",
+			"grades": [
+				[
+					"Intracursus",
+					[
+                        "20",
+						"1.5"
+					]
+				],
+                [
+					"réservé IUT",
+					[
+                        "20",
+						"1.5"
+					]
+				]
+			],
+			"empty": ""
+		},
+		{
+			"name": "SI VOUS ETES À L'IUT",
+			"teacher": "VOS NOTES NE SONT",
+			"average": "PAS ENCORE DISPONIBLES",
+			"grades": [
+				[
+					"Voir FAQ pour",
+					[
+                        "20",
+						"1.5"
+					]
+				],
+                [
+					"+ d'infos",
+					[
+                        "20",
+						"1.5"
+					]
+				]
+			],
+			"empty": ""
+		}
+	],
+	"admission": "",
+	"average": "",
+	"position": ""
+}

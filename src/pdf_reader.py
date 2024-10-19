@@ -3,7 +3,7 @@
 # Votre ENT. Dans votre poche.                         #
 # Développé par Hugo Meleiro (@hugofnm) / MetrixMedia  #
 # Basé sur les travaux de : @itskatt/extracursus       #
-# 2022 - 2024                                          #
+# 2022 - 2025                                          #
 ########################################################
 
 import io
@@ -118,7 +118,9 @@ def extract_subjects(text):
                     float(match.group(2)), # note
                     float(match.group(3)) # coef
                 ))
-            else: # "Résultats non publiés"
+            elif match.group()=="Résultats non publiés": # "Résultats non publiés"
+                grades.append(("(coeff 1.0000)",))
+            else: 
                 grades.append((match.group(),))
 
         # calcul de la moyenne si elle n'apparait pas sur le PDF

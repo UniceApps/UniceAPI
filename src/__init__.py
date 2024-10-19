@@ -3,14 +3,14 @@
 # Votre ENT. Dans votre poche.                         #
 # Développé par Hugo Meleiro (@hugofnm) / MetrixMedia  #
 # MIT License                                          #
-# 2022 - 2024                                          #
+# 2022 - 2025                                          #
 ########################################################
 
-import base64
 from datetime import datetime
 import pytz
 import io
 import os
+import re
 import time
 from datetime import timedelta
 from functools import lru_cache
@@ -36,13 +36,15 @@ import icalendar
 import flask_monitoringdashboard as dashboard
 
 CACHE_DURATION = 900 # 15 minutes
+ADE_PROJECT = 4 # Projet 2024-2025
+ADE_DATE = "&firstDate=2024-09-01&lastDate=2025-08-31"
 
 def extract_key_value(key):
     """Extracts a specific key-value pair from a JSON data"""
-    with open("status.json", "r") as json_data:
-        json_data = json_data.read()
-        data = json.loads(json_data)
+    with open("status.json", "r") as f:
+        data = json.load(f)
         value = data.get(key)
+        f.close()
     return value
 
 # get the secret key from the file "token.json" and take the "secret" value
@@ -52,6 +54,7 @@ with open("secret.json", "r") as f:
     bugsnagAPI = tempjson.get("bugsnag") # old key destroyed dont worry :p
     whichServer = tempjson.get("whichServer")
     banned = tempjson.get("banned")
+    f.close()
 
 bugsnag.configure(
     api_key=bugsnagAPI,
@@ -59,7 +62,7 @@ bugsnag.configure(
 )
 
 if whichServer == "prod" or whichServer == "dev":
-    logging.basicConfig(filename='UniceAPI.log', level=logging.ERROR)
+    logging.basicConfig(filename='UniceAPI.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
     logger = logging.getLogger("UniceAPI.log")
     handler = BugsnagHandler()
     handler.setLevel(logging.ERROR)
@@ -70,7 +73,7 @@ handle_exceptions(app)
 dashboard.config.init_from(file='config.cfg')
 
 # Only for debug
-#app.debug = True
+# app.debug = True
 
 if not key:
     app.logger.warning("Using developement key")
@@ -140,9 +143,30 @@ def dl_pdf(username, semester):
 def index():
     return render_template("index.html")
 
+# Status -----------------------------------------------------------------------
+@app.route("/status")
+def status():
+    global banned
+
+    resp = "v2.2.0"
+
+    ip = get_remote_address()
+    isBanned = False
+    if ip in banned:
+        isBanned = True
+
+    # send response as json
+    resp = {
+        "banned": isBanned, # true if the ip is banned
+        "version": resp, # version de l'app
+        "isAvailable": extract_key_value("isAvailable"),
+        "maintenance": extract_key_value("maintenance")
+    }
+
+    return resp
+
 # Login API -----------------------------------------------------------------------
 @app.route("/login", methods=["POST"])
-@limiter.limit("5 per minute")
 @limiter.limit("1 per second")
 def login():
     data = request.get_json()
@@ -157,11 +181,96 @@ def login():
 
     client = IntraClient()
 
+    if(username == "demo" and password == "demo"):
+        # close the client on fresh login
+        if username in active_clients.keys():
+            active_clients[username].close()
+
+        active_clients[username] = client
+        session["username"] = username
+        return {
+            "name": "Anaïs Démeaux",
+            "userADEData": {
+                "cursus" : "demo",
+                "uid" : "demo"
+            },
+            "semesters": [{
+                "id": 0,
+                "semester": "TBIS1T"
+            }],
+            "success": True
+        }
+
     # we try to login
     if not client.login(username, password):
         return {
             "success": False
         }
+
+    # login was a sucess
+    semesters = client.get_semesters()
+    
+    resSem = []
+    temp = {}
+    i = 0
+    try:
+        for sem in semesters:
+            temp = {
+                "id": i,
+                "semester": sem
+            }
+            resSem.append(temp)
+            i += 1
+    except:
+        resSem.append({
+            "id": 0,
+            "semester": "Intracursus Indisponible"
+        })
+
+    semesters = resSem
+    info = client.get_info()
+
+    # close the client on fresh login
+    if username in active_clients.keys():
+        active_clients[username].close()
+
+    active_clients[username] = client
+    session["username"] = username
+
+    try:
+        name = info["displayName"]
+        userADEData = {
+            "cursus" : info["diplomep"] + "-VET",
+            "uid" : info["uid"]
+        }
+    except KeyError:
+        return {
+            "success": False
+        }
+
+    return {
+        "name": name,
+        "userADEData": userADEData,
+        "semesters": semesters,
+        "success": True
+    }
+
+# First Login API -----------------------------------------------------------------------
+@app.route("/signup", methods=["POST"])
+@limiter.limit("1 per second")
+def signup():
+    data = request.get_json()
+    if not data:
+        data = request.form
+
+    try:
+        username = data["username"]
+        password = data["password"]
+        eula = data["eula"]
+    except (KeyError, TypeError):
+        abort(400)
+
+    client = IntraClient()
 
     if(username == "demo" and password == "demo"):
         # close the client on fresh login
@@ -171,9 +280,22 @@ def login():
         active_clients[username] = client
         session["username"] = username
         return {
-            "success": True,
             "name": "Anaïs Démeaux",
-            "semesters": ["TBIS1T"]
+            "userADEData": {
+                "cursus" : "demo",
+                "uid" : "demo"
+            },
+            "semesters": [{
+                "id": 0,
+                "semester": "TBIS1T"
+            }],
+            "success": True
+        }
+
+    # we try to login
+    if not client.login(username, password):
+        return {
+            "success": False
         }
 
     # login was a sucess
@@ -182,16 +304,22 @@ def login():
     resSem = []
     temp = {}
     i = 0
-    for sem in semesters:
-        temp = {
-            "id": i,
-            "semester": sem
-        }
-        resSem.append(temp)
-        i += 1
+    try:
+        for sem in semesters:
+            temp = {
+                "id": i,
+                "semester": sem
+            }
+            resSem.append(temp)
+            i += 1
+    except:
+        resSem.append({
+            "id": 0,
+            "semester": "Indisponible"
+        })
 
     semesters = resSem
-    name = client.get_name()
+    info = client.get_info()
 
     # close the client on fresh login
     if username in active_clients.keys():
@@ -200,10 +328,22 @@ def login():
     active_clients[username] = client
     session["username"] = username
 
+    try:
+        name = info["displayName"]
+        userADEData = {
+            "cursus" : info["diplomep"] + "-VET",
+            "uid" : info["uid"]
+        }
+    except KeyError:
+        return {
+            "success": False
+        }
+
     return {
-        "success": True,
         "name": name,
-        "semesters": semesters
+        "userADEData": userADEData,
+        "semesters": semesters,
+        "success": True
     }
 
 # Get avatar -----------------------------------------------------------------------
@@ -243,7 +383,11 @@ def load_pdf():
     if(user == "demo"):
         return "OK"
 
-    dl_pdf(user, semester)
+    try:
+        dl_pdf(user, semester)
+    except Exception as e:
+        session['not_intra'] = True
+        return "OK"
 
     return "OK"
 
@@ -261,59 +405,27 @@ def scrape_pdf():
     # if no semester is provided, we select the current one
     semester = request.args.get("sem", client.current_semester)
 
+    if(session.get("not_intra")):
+        with open("./demo/notintra.json", "rb") as f:
+            pdf_data = json.load(f)
+            f.close()
+        return json.dumps(pdf_data)
+
     if(user == "demo"):
         with open("./demo/demo.json", "rb") as f:
             pdf_data = json.load(f)
+            f.close()
         return json.dumps(pdf_data)
-
-    pdf_data = dl_and_parse_pdf(user, semester)
-    
-    return json.dumps(pdf_data)
-
-# Auto mode -----------------------------------------------------------------------
-@app.route("/auto_login", methods=["POST"])
-def auto_login():
-    # get api key
-    global key
-
-    # compare headers for api key
-    if request.headers.get("X-API-Key") != key:
-        abort(403)
-
-    data = request.get_json()
-    if not data:
-        data = request.form
 
     try:
-        username = data["username"]
-        password = data["password"]
-    except (KeyError, TypeError):
-        abort(400)
-
-    client = IntraClient()
-
-    # we try to login
-    if not client.login(username, password):
-        return {
-            "success": False
-        }
-
-    # close the client on fresh login
-    if username in active_clients.keys():
-        active_clients[username].close()
-
-    active_clients[username] = client
-    session["username"] = username
-
-    semester = request.args.get("sem")
-
-    if(username == "demo"):
-        with open("./demo/demo.json", "rb") as f:
+        pdf_data = dl_and_parse_pdf(user, semester)
+    except :
+        with open("./demo/notintra.json", "rb") as f:
             pdf_data = json.load(f)
+            f.close()
         return json.dumps(pdf_data)
-    else:
-        pdf_data = dl_and_parse_pdf(username, semester)
-        return json.dumps(pdf_data)
+    
+    return json.dumps(pdf_data)
 
 # Whoami -----------------------------------------------------------------------
 @app.route("/whoami")
@@ -327,6 +439,16 @@ def whoami():
         return {}
        
     username = session.get("username", "403")
+
+    if(username == "demo"):
+        return {
+            "username": username,
+            "semesters": [{
+                "id": 0,
+                "semester": "TBIS1T"
+            }]
+        }
+
     semesters = client.get_semesters()
 
     resSem = []
@@ -342,7 +464,6 @@ def whoami():
 
     semesters = resSem
     
-    name = client.get_name()
     resp = {
         "username": username,
         "semesters": semesters
@@ -355,7 +476,6 @@ def logout():
     user = session.get("username")
     if not user:
         return "No one to logout"
-        abort(401)
 
     client = active_clients.get(user)
     if client is None:
@@ -369,46 +489,25 @@ def logout():
         session.pop("username", None)
         return f"Logged out {user}"
 
-# Status -----------------------------------------------------------------------
-@app.route("/status")
-def status():
-    global banned
-
-    resp = requests.get("https://github.com/UniceApps/UniceNotes/releases/latest").text
-    # get the version number on the title of the page
-    resp = resp.split("<title>")[1].split("</title>")[0].split(" ")[1]
-
-    ip = get_remote_address()
-    isBanned = False
-    if ip in banned:
-        isBanned = True
-
-    # send response as json
-    resp = {
-        "banned": isBanned, # true if the ip is banned
-        "version": resp, # version de l'app
-        "isAvailable": extract_key_value("disponible"),
-        "maintenance": extract_key_value("maintenance") 
-    }
-
-    return resp
-
 # iCal API -----------------------------------------------------------------------
-@app.route("/edt/<username>", methods=["POST"])
-def edt(username):
-    password = request.args.get("password")
-
-    if not username:
+@app.route("/edt/<adeid>", methods=["POST"])
+@limiter.limit("10 per minute")
+def edt(adeid):
+    if not adeid:
         abort(400)
 
-    if username == "demo":
-        username = "vermaelen"
-
-    if password is None:
-        response = requests.get("https://iut-ical.unice.fr/gpucal.php?name=" + username, verify=False)
-    else:
-        response = requests.get("https://iut-ical.unice.fr/gpucal.php?name=" + username + "&password=" + password, verify=False)
-
+    try:
+        response = requests.get(f"https://edtweb.univ-cotedazur.fr/jsp/custom/modules/plannings/anonymous_cal.jsp?code={adeid}&projectId={ADE_PROJECT}&calType=ical{ADE_DATE}", timeout = 3)
+    except Exception as e:
+        return [{
+            "id": 0,
+            "summary": "ADE Indisponible",
+            "location": "Emplois du temps indisponibles.",
+            "description": "",
+            "start_time": datetime.now().isoformat(),
+            "end_time": (datetime.now() + timedelta(hours=1)).isoformat()
+        }]
+    
     if response.status_code != 200:
         abort(500)  # internal server error
 
@@ -422,11 +521,18 @@ def edt(username):
     events = []
     for component in calendar.walk():
         if component.name == "VEVENT":
+
+            # Clean some ADE shit
+            desc = component.get("description").to_ical().decode()
+            desc = desc.replace("\\n", "\n")
+            desc = desc.replace("\\,", ",")
+            desc = re.sub(r"\(Exporté le:[^)]+\)", "", desc).strip()
+
             event = {
                 "id": id, 
                 "summary": component.get("summary").to_ical().decode(),
                 "location": component.get("location").to_ical().decode(),
-                "description": component.get("description").to_ical().decode(),
+                "description": desc,
                 "start_time": component.get("dtstart").dt.isoformat(),
                 "end_time": component.get("dtend").dt.isoformat(),
             }
@@ -439,25 +545,25 @@ def edt(username):
     return events_json
 
 # Get the current event in the calendar -----------------------------------------------------------------------
-@app.route("/edt/<username>/nextevent", methods=["GET"])
-@limiter.limit("1 per second")
-@limiter.limit("5 per minute")
-def nextevent(username):
-    password = request.args.get("password")
-
-    if not username:
+@app.route("/edt/<adeid>/nextevent", methods=["GET"])
+@limiter.limit("15 per minute")
+def nextevent(adeid):
+    if not adeid:
         abort(400)
 
-    if username == "demo":
-        username = "vermaelen"
-
-    if password is None:
-        response = requests.get("https://iut-ical.unice.fr/gpucal.php?name=" + username, verify=False)
-    else:
-        response = requests.get("https://iut-ical.unice.fr/gpucal.php?name=" + username + "&password=" + password, verify=False)
+    try :
+        response = requests.get(f"https://edtweb.univ-cotedazur.fr/jsp/custom/modules/plannings/anonymous_cal.jsp?code={adeid}&projectId={ADE_PROJECT}&calType=ical{ADE_DATE}", timeout = 3)
+    except Exception as e:
+        return {
+            "summary": "ADE Indisponible",
+            "location": "Emplois du temps indisponibles."
+        }
 
     if response.status_code != 200:
-        abort(500)  # internal server error
+        return {
+            "summary": "ADE Indisponible",
+            "location": "Emplois du temps indisponibles."
+        }
 
     ical_string = response.content
 
@@ -473,13 +579,16 @@ def nextevent(username):
     next_event_time = None
     for component in calendar.walk():
         if component.name == "VEVENT":
-            if component.get("dtstart").dt > now and (next_event_time is None or next_event_time > component.get("dtstart").dt):
+            if component.get("dtstart").dt > (now - timedelta(minutes = 15)) and (next_event_time is None or next_event_time > component.get("dtstart").dt):
                 next_event = component
                 next_event_time = component.get("dtstart").dt
 
     # if there is no next event
     if next_event is None:
-        return {}
+        return {
+            "summary": "Non disponible",
+            "location": "Pas de cours en vue :)"
+        }
     
     # return the next event as json
     event = {
@@ -490,76 +599,13 @@ def nextevent(username):
         "end_time": next_event.get("dtend").dt.isoformat(),
     }
     event_json = json.dumps(event)
-    return event_json            
+    return event_json
 
-# Absences API -----------------------------------------------------------------------
-@app.route("/absences", methods=["GET"])
-def absences():
-    user = session.get("username")
-    if not user:
-        abort(401)
+# Dashboard -----------------------------------------------------------------------
+def get_username():
+    return session.get("username")
 
-    client = active_clients.get(user)
-    if client is None:
-        abort(401)
-
-    if(user == "demo"):
-        with open("./demo/demoabs.json", "rb") as f:
-            pdf_data = json.load(f)
-        return json.dumps(pdf_data)
-
-    absences_data = client.get_absences()
-            
-    # Convert the result to JSON string
-    absences_data = json.dumps(absences_data)
-    
-    return absences_data
-
-# Admin --------------------------------------------------------------------------
-@app.route("/admin", methods=["GET", "POST"])
-@limiter.limit("2 per hour")
-def admin():
-    # get api key
-    global key
-
-    # get authorized ip
-    with open("secret.json", "r") as f:
-        autorized_ip = json.load(f).get("ip")
-
-    # check if the ip is correct (authorized ip is a list)
-    if get_remote_address() not in autorized_ip:
-        app.logger.warning(f"Unauthorized access from {get_remote_address()}")
-        abort(403)
-
-    if request.method == "GET":
-        resp = {
-            "disponible": extract_key_value("disponible"),
-            "maintenance": extract_key_value("maintenance")
-        }
-        return resp
-
-    if request.method == "POST":
-        # get the form data
-        data = request.get_json()
-        api_key = data.get("api_key")
-
-        # check if the api key is correct
-        if api_key != key:
-            abort(403)
-        elif api_key == key:
-            for res in data.keys():
-                if res not in ["maintenance", "disponible", "api_key"]:
-                    abort(400)
-                elif res == "api_key":
-                    del data[res]
-                    with open("status.json", "w") as f:
-                        f.flush()
-                        f.write(json.dumps(data))
-                    app.logger.info(f"Admin updated maintenance to {data['maintenance']} and disponible to {data['disponible']}")
-                    return "OK"
-        else :
-            abort(400)
-
+dashboard.config.group_by = get_username
 dashboard.bind(app)
 
 if __name__ == '__main__':
