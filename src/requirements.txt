@@ -9,7 +9,7 @@ waitress ~= 2.1
 beautifulsoup4 ~= 4.12
 icalendar ~= 5.0.12
 pytz ~= 2023.3
-werkzeug ~= 3.0.3
+werkzeug ~= 3.0.4
 bugsnag[flask] ~= 4.7.1
 flask_monitoringdashboard >= 3.3.2
 sentry-sdk[flask]
